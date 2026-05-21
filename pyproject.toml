@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ertorganizer"
+version = "0.3.0"
+description = "Akıllı dosya organizasyonu ve format dönüştürme aracı (terminal CLI)."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Ertuğrul Köksal", email = "asteksoftware@gmail.com" }]
+license = { text = "MIT" }
+keywords = ["cli", "file-converter", "pdf", "docx", "xlsx", "organizer", "pandoc"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Turkish",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "prompt-toolkit>=3.0",
+    "rich>=13.0",
+    "Pillow>=10.0",
+    "markdown>=3.5",
+]
+
+[project.optional-dependencies]
+pdf = [
+    "pdf2image>=1.17",
+    "pypdf>=4.0",
+    "pdf2docx>=0.5",
+]
+office = [
+    "docx2pdf>=0.1.8",
+    "pypandoc>=1.13",
+    "python-docx>=1.1",
+]
+excel = [
+    "openpyxl>=3.1",
+]
+all = [
+    "pdf2image>=1.17",
+    "pypdf>=4.0",
+    "pdf2docx>=0.5",
+    "docx2pdf>=0.1.8",
+    "pypandoc>=1.13",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+]
+dev = [
+    "build>=1.0",
+    "twine>=5.0",
+    "pytest>=7.0",
+]
+
+[project.scripts]
+ertorganizer = "ertorganizer.main:main"
+
+[project.urls]
+Homepage = "https://github.com/ertugrulkoksalgsu/ertorganizer"
+Issues = "https://github.com/ertugrulkoksalgsu/ertorganizer/issues"
+
+[tool.setuptools.packages.find]
+include = ["ertorganizer*"]
+exclude = ["test_folder*", "tests*"]
