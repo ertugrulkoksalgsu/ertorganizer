@@ -1,0 +1,85 @@
+name: Release binaries
+
+# v* bicimli bir tag push'landiginda (orn. v0.3.0) tetiklenir.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # GitHub Release olusturmak icin gerekli
+
+jobs:
+  # 1. asama: her platformda binary derle ve artifact olarak yukle.
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            label: macOS arm64
+            asset: ertorganizer-macos-arm64.tar.gz
+          - os: macos-13
+            label: macOS x86_64
+            asset: ertorganizer-macos-x86_64.tar.gz
+          - os: windows-latest
+            label: Windows x86_64
+            asset: ertorganizer-windows-x86_64.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install ".[all]"
+
+      - name: Build binary
+        run: pyinstaller --noconfirm --clean ertorganizer.spec
+
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: tar -czf "${{ matrix.asset }}" -C dist ertorganizer
+
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Copy-Item dist/ertorganizer.exe "${{ matrix.asset }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  # 2. asama: tum artifact'leri topla, SHA256 hesapla, release'i bir kez olustur.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Compute SHA256 sums
+        run: |
+          cd artifacts
+          shasum -a 256 * | tee SHA256SUMS.txt | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          fail_on_unmatched_files: true
