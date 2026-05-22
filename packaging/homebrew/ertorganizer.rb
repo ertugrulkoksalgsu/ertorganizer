@@ -1,21 +1,20 @@
 class Ertorganizer < Formula
   desc "Akilli dosya organizasyonu ve format donusturme araci (terminal CLI)"
   homepage "https://github.com/ertugrulkoksalgsu/ertorganizer"
+  url "https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.3.0/ertorganizer-macos-arm64.tar.gz"
   version "0.3.0"
+  sha256 "3658601885115b4a8acf0840959e0fc66b6a3d9d31a73390ca7c8d3624b37d8e"
   license "MIT"
 
   # Yalnizca Apple Silicon (arm64). Intel Mac kullanicilari pipx ile kurar.
   depends_on arch: :arm64
   depends_on :macos
 
-  url "https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.3.0/ertorganizer-macos-arm64.tar.gz"
-  sha256 "PLACEHOLDER_ARM64_SHA256"
-
   # Hafif sistem araclari otomatik kurulur. LibreOffice bilerek zorunlu
   # tutulmadi (~700 MB); Office->PDF gerektiginde ErtOrganizer kullaniciya
   # "brew install --cask libreoffice" onerir (graceful error).
-  depends_on "poppler"
   depends_on "pandoc"
+  depends_on "poppler"
 
   def install
     bin.install "ertorganizer"

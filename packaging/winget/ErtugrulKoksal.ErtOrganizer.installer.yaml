@@ -7,6 +7,6 @@ Commands:
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.3.0/ertorganizer-windows-x86_64.exe
-    InstallerSha256: PLACEHOLDER_WINDOWS_SHA256
+    InstallerSha256: 1F5459F5F8C33831BFDC0FC9964251557FDE9554A925DCAECE4023CA8A1FB5F3
 ManifestType: installer
 ManifestVersion: 1.6.0
