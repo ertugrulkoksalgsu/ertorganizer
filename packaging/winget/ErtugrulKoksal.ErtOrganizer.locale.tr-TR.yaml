@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: ErtugrulKoksal.ErtOrganizer
+PackageVersion: 0.3.0
+PackageLocale: tr-TR
+Publisher: Ertugrul Koksal
+PublisherUrl: https://github.com/ertugrulkoksalgsu
+PublisherSupportUrl: https://github.com/ertugrulkoksalgsu/ertorganizer/issues
+PackageName: ErtOrganizer
+PackageUrl: https://github.com/ertugrulkoksalgsu/ertorganizer
+License: MIT
+LicenseUrl: https://github.com/ertugrulkoksalgsu/ertorganizer/blob/main/LICENSE
+ShortDescription: Akilli dosya organizasyonu ve format donusturme araci (terminal CLI).
+Description: |-
+  ErtOrganizer; klasorleri akillica duzenleyen, toplu dosya tasiyan ve
+  PDF, Word, Excel, resim, Markdown formatlari arasinda donusum yapan
+  interaktif bir terminal aracidir.
+Moniker: ertorganizer
+Tags:
+  - cli
+  - file-converter
+  - pdf
+  - docx
+  - xlsx
+  - organizer
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
