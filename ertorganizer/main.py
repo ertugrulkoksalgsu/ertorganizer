@@ -4,27 +4,28 @@ import time
 from collections import defaultdict
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.completion import Completer, Completion, PathCompleter
+from prompt_toolkit.document import Document
 from prompt_toolkit.styles import Style
 from rich.align import Align
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
-from rich.prompt import Confirm
+from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 
 from . import __version__
 from . import system as ertsystem
 from .converters import convert_file, supported_pairs
-from .organizer import organize_folder
+from .organizers import all_strategies, find_strategy, organize_folder
 
 console = Console()
 NL = chr(10)
 
 
 SKILLS = [
-    ('/organize', 'Mevcut klasördeki dosyaları türüne göre ayırır (Resimler, Belgeler vs.)'),
+    ('/organize', 'Dosyaları seçtiğiniz yönteme göre ayırır (kategori/detay/uzantı). Örn: /organize --by detay'),
     ('/convert', 'Belirtilen dosyanın formatını dönüştürür (Örn: /convert a.png a.jpg)'),
     ('/formats', 'Desteklenen tüm dönüşüm formatlarını tablo halinde gösterir'),
     ('/doctor', 'Sistem ve Python bağımlılıklarını tarar, eksikleri raporlar'),
@@ -38,19 +39,76 @@ SKILLS = [
 ]
 
 
+# Argümanı dosya/klasör yolu olan komutlar; değeri = sadece klasör mü?
+PATH_COMMANDS = {
+    '/convert': False,   # dosya + klasör
+    '/organize': True,   # klasör (içine bakılacak hedef)
+    '/cd': True,         # sadece klasör
+}
+
+
 class SkillCompleter(Completer):
+    """Bağlam-duyarlı tamamlayıcı.
+
+    İlk kelimede komut adlarını; yol-alan komutların argümanlarında dosya/klasör
+    yollarını (`/cd` için yalnızca klasör); `/organize --by` sonrasında strateji
+    adlarını tamamlar.
+    """
+
+    def __init__(self):
+        self._files = PathCompleter(expanduser=True)
+        self._dirs = PathCompleter(only_directories=True, expanduser=True)
+
     def get_completions(self, document, complete_event):
-        word = document.get_word_before_cursor(WORD=True)
-        if not document.text.startswith('/'):
+        text = document.text_before_cursor
+        stripped = text.lstrip()
+        if not stripped:
             return
-        for skill, description in SKILLS:
-            if skill.startswith(word):
-                yield Completion(
-                    skill,
-                    start_position=-len(word),
-                    display=skill,
-                    display_meta=description,
-                )
+
+        # 1) Hâlâ ilk kelimeyi (komut adını) yazıyoruz.
+        if " " not in stripped:
+            if stripped.startswith("/"):
+                for skill, description in SKILLS:
+                    if skill.startswith(stripped):
+                        yield Completion(
+                            skill,
+                            start_position=-len(stripped),
+                            display=skill,
+                            display_meta=description,
+                        )
+            return
+
+        # 2) Komut + argüman bağlamı.
+        parts = stripped.split()
+        command = parts[0].lower()
+
+        if text.endswith(" "):
+            frag = ""
+            prev = parts[-1]
+        else:
+            frag = parts[-1]
+            prev = parts[-2] if len(parts) >= 2 else parts[0]
+
+        # /organize --by <yöntem>: strateji adlarını tamamla.
+        if command == "/organize" and prev in ("--by", "-b"):
+            for s in all_strategies():
+                if s.key.startswith(frag.lower()):
+                    yield Completion(s.key, start_position=-len(frag),
+                                     display=s.key, display_meta=s.label)
+            return
+
+        # /organize için '--by' bayrağını öner.
+        if command == "/organize" and frag.startswith("-"):
+            if "--by".startswith(frag):
+                yield Completion("--by", start_position=-len(frag),
+                                 display="--by", display_meta="Organize yöntemi seç")
+            return
+
+        # Yol-alan komutlarda dosya/klasör tamamlama.
+        if command in PATH_COMMANDS:
+            sub_doc = Document(frag, len(frag))
+            completer = self._dirs if PATH_COMMANDS[command] else self._files
+            yield from completer.get_completions(sub_doc, complete_event)
 
 
 def print_welcome():
@@ -99,13 +157,13 @@ def print_welcome():
 
 def print_help():
     console.print(f"{NL}[bold cyan]Kullanılabilir Komutlar:[/bold cyan]")
-    console.print("  [magenta]/organize[/magenta] [klasör_yolu]   - Dosyaları uzantılarına göre ayırır.")
+    console.print("  [magenta]/organize[/magenta] [--by <yöntem>] [klasör] - Dosyaları ayırır. Yöntem: kategori (varsayılan), detay, uzantı. Argümansız çağrıda menü çıkar.")
     console.print("  [magenta]/convert[/magenta] <girdi> <hedef>  - Dosya formatını dönüştürür (Örn: rapor.docx rapor.pdf).")
     console.print("  [magenta]/formats[/magenta]                  - Desteklenen tüm dönüşüm formatlarını listeler.")
     console.print("  [magenta]/doctor[/magenta]                   - Sistem ve Python bağımlılıklarını tarar.")
     console.print("  [magenta]/install[/magenta] <ad|all>         - Eksik bağımlılığı otomatik kurar.")
     console.print("  [magenta]/pwd[/magenta]                      - Mevcut çalışma dizinini gösterir.")
-    console.print("  [magenta]/cd[/magenta] <klasör_yolu>         - Çalışma dizinini değiştirir.")
+    console.print("  [magenta]/cd[/magenta] <klasör> | - | (boş)   - Dizin değiştirir. '-' önceki dizine, argümansız ev dizinine döner.")
     console.print("  [magenta]/version[/magenta]                  - ErtOrganizer sürümünü gösterir.")
     console.print("  [magenta]/help[/magenta]                     - Bu yardım menüsünü gösterir.")
     console.print(f"  [magenta]/exit, /quit[/magenta]              - Çıkış yapar.{NL}")
@@ -264,6 +322,93 @@ def run_convert(args):
     console.print(f"[{style}]{result.message}[/{style}]")
 
 
+def _normalize_strategy_key(raw):
+    """Kullanıcı girdisini strateji anahtarına eşler ('uzantı' -> 'uzanti')."""
+    key = raw.strip().lower().replace("ı", "i")
+    return key
+
+
+def _prompt_strategy():
+    """İnteraktif strateji menüsü; seçilen stratejiyi döndürür."""
+    strategies = all_strategies()
+    console.print(f"{NL}[bold cyan]Organize yöntemi seçin:[/bold cyan]")
+    for s in strategies:
+        console.print(f"  [magenta]{s.key}[/magenta] — [bold]{s.label}[/bold]: [dim]{s.description}[/dim]")
+    choice = Prompt.ask(
+        "Yöntem",
+        choices=[s.key for s in strategies],
+        default="kategori",
+    )
+    return find_strategy(choice)
+
+
+def run_organize(args):
+    """/organize [--by <yöntem>] [klasör] komutunu işler."""
+    by = None
+    positional = []
+    i = 1
+    while i < len(args):
+        tok = args[i]
+        if tok in ("--by", "-b"):
+            if i + 1 >= len(args):
+                console.print("[yellow]Kullanım: /organize --by <kategori|detay|uzanti> [klasör][/yellow]")
+                return
+            by = _normalize_strategy_key(args[i + 1])
+            i += 2
+            continue
+        positional.append(tok)
+        i += 1
+
+    target_path = os.path.expanduser(positional[0]) if positional else os.getcwd()
+
+    if by is None:
+        strategy = _prompt_strategy()
+    else:
+        strategy = find_strategy(by)
+        if strategy is None:
+            valid = ", ".join(s.key for s in all_strategies())
+            console.print(f"[red]Bilinmeyen yöntem: '{by}'[/red] [dim](geçerli: {valid})[/dim]")
+            return
+
+    console.print(
+        f"[cyan]✨ Organizasyon başlatıldı ([bold]{strategy.label}[/bold]): {target_path}[/cyan]"
+    )
+    organize_folder(target_path, strategy)
+
+
+# `/cd -` için en son bulunulan dizini hatırlar.
+_prev_dir = {"path": None}
+
+
+def run_cd(args):
+    """/cd <klasör> | /cd - | /cd (ev dizini) komutunu işler."""
+    if len(args) > 1:
+        raw = args[1]
+        if raw == "-":
+            if _prev_dir["path"] is None:
+                console.print("[yellow]Önceki dizin yok.[/yellow]")
+                return
+            target_dir = _prev_dir["path"]
+        else:
+            target_dir = os.path.expanduser(raw)
+    else:
+        target_dir = os.path.expanduser("~")
+
+    current = os.getcwd()
+    try:
+        os.chdir(target_dir)
+        _prev_dir["path"] = current
+        console.print(f"[green]Konum değiştirildi:[/green] {os.getcwd()}")
+    except FileNotFoundError:
+        console.print(f"[red]Hata: Klasör bulunamadı '{target_dir}'[/red]")
+    except NotADirectoryError:
+        console.print(f"[red]Hata: Bir klasör değil '{target_dir}'[/red]")
+    except PermissionError:
+        console.print(f"[red]Hata: Erişim izni yok '{target_dir}'[/red]")
+    except OSError as e:
+        console.print(f"[red]Hata: {e}[/red]")
+
+
 def main():
     print_welcome()
 
@@ -316,24 +461,10 @@ def main():
                 console.print(f"[green]Mevcut konum:[/green] {os.getcwd()}")
 
             elif command == '/cd':
-                if len(args) > 1:
-                    target_dir = os.path.expanduser(args[1])
-                    try:
-                        os.chdir(target_dir)
-                        console.print(f"[green]Konum değiştirildi:[/green] {os.getcwd()}")
-                    except FileNotFoundError:
-                        console.print(f"[red]Hata: Klasör bulunamadı '{target_dir}'[/red]")
-                    except Exception as e:
-                        console.print(f"[red]Hata: {e}[/red]")
-                else:
-                    console.print("[yellow]Kullanım: /cd <klasör_yolu>[/yellow]")
+                run_cd(args)
 
             elif command == '/organize':
-                target_path = os.getcwd()
-                if len(args) > 1:
-                    target_path = os.path.expanduser(args[1])
-                console.print(f"[cyan]✨ Organizasyon işlemi başlatıldı: {target_path}[/cyan]")
-                organize_folder(target_path)
+                run_organize(args)
 
             elif command == '/convert':
                 run_convert(args)
