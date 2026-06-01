@@ -1,9 +1,9 @@
 class Ertorganizer < Formula
   desc "Akilli dosya organizasyonu ve format donusturme araci (terminal CLI)"
   homepage "https://github.com/ertugrulkoksalgsu/ertorganizer"
-  url "https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.3.0/ertorganizer-macos-arm64.tar.gz"
-  version "0.3.0"
-  sha256 "3658601885115b4a8acf0840959e0fc66b6a3d9d31a73390ca7c8d3624b37d8e"
+  url "https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.4.0/ertorganizer-macos-arm64.tar.gz"
+  version "0.4.0"
+  sha256 "4dc117194a1a15b571e04ba09ea8bb72388c31c15eaba8aa714104999ebeba4b"
   license "MIT"
 
   # Yalnizca Apple Silicon (arm64). Intel Mac kullanicilari pipx ile kurar.

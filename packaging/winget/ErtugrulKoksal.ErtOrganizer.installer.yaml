@@ -1,12 +1,12 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 PackageIdentifier: ErtugrulKoksal.ErtOrganizer
-PackageVersion: 0.3.0
+PackageVersion: 0.4.0
 InstallerType: portable
 Commands:
   - ertorganizer
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.3.0/ertorganizer-windows-x86_64.exe
-    InstallerSha256: 1F5459F5F8C33831BFDC0FC9964251557FDE9554A925DCAECE4023CA8A1FB5F3
+    InstallerUrl: https://github.com/ertugrulkoksalgsu/ertorganizer/releases/download/v0.4.0/ertorganizer-windows-x86_64.exe
+    InstallerSha256: BEB1D6720EC747ED6BF55E5CDF17939A70F43A8062B46AE94DC5E6CA7E5BC4CD
 ManifestType: installer
 ManifestVersion: 1.6.0
